@@ -1,0 +1,167 @@
+﻿@model IEnumerable<TixplorerCoreFrontend.ViewModels.CartViewModel>
+@using TixlorerCore.Models
+
+@{
+    ViewData["Title"] = "CartView";
+}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC&display=swap" rel="stylesheet">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+
+<div class="container mt-5 mb-5" style="font-family: 'Noto Sans TC', sans-serif;">
+<h2>購物車</h2>
+
+<table class="table table-striped table-hover table-borderless">
+    <thead style="text-align: center;">
+        <tr>
+            <th colspan="2">
+                商品
+            </th>
+            <th>
+                價格
+            </th>
+            <th>
+                數量
+            </th>
+            <th>
+                金額
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @{
+            var eidtCartItemId = "";
+            int itemCount = 0;
+            decimal sum = 0;
+            foreach (var item in Model)
+            {
+                itemCount++;
+                sum += item.SubTotal;
+                <tr style="vertical-align: middle;">
+                <td style="text-align: center;">
+                <!-- 商品名稱與圖片顯示處理 -->
+                    <img src="/images/@item.mainProduct.Image" class="object-fit-cover border rounded" style="width: 80px; height: 80px;" />
+                </td>
+                    @if (item.ProductType == 0) // 如果商品是單票，則僅顯示主商品。
+                    {
+                        <td>
+                            <a class="link-dark link-underline link-underline-opacity-0" href="@($"{GlobalVar.MVCsurl}Ticket/ticket?id={item.mainProduct.PId}")">@item.mainProduct.Name</a>
+                        </td>
+                    }
+                    else // 如果商品是套票，分開顯示主商品與子商品。
+                    {
+                        <td>
+                            <div> <!--主商品顯示-->
+                                <a class="link-dark link-underline link-underline-opacity-0" href="@($"{GlobalVar.MVCsurl}Ticket/ticket?id={item.mainProduct.PId}")">@item.mainProduct.Name</a>
+                            </div>
+                            <div class="ms-2">  <!--子商品縮排顯示-->
+                                    @foreach (var subProduct in item.product)
+                                    {
+                                        <div>
+                                            <a class="link-dark link-underline link-underline-opacity-0" href="@($"{GlobalVar.MVCsurl}Ticket/ticket?id={subProduct.PId}")">【套票組合】@subProduct.Name</a>
+                                        </div>
+                                    }
+                            </div>
+                        </td>
+                    }
+                    
+                <!-- 商品單價金額顯示處理 -->
+                @if (item.ProductType == 0)
+                    {
+                        <td style="text-align: center;">
+                            <span class="text-secondary text-decoration-line-through">
+                                $@item.mainProduct.Price.ToString("N0")
+                            </span><span class="text-danger fw-bold">
+                                $@string.Format("{0:N0}", item.mainProduct.DiscountPrice)
+                            </span>
+                        </td>
+                    }
+                    else
+                    {
+                        <td style="text-align: center;">
+                            <span class="text-secondary text-decoration-line-through">
+                                $@string.Format("{0:N0}", item.SubTotal * 1.1m)
+                            </span>
+                            <span class="text-danger fw-bold">
+                                $@item.SubTotal.ToString("N0")
+                            </span>
+                        </td>
+                    }
+
+                <!-- 商品數量顯示處理 -->
+                    <td style="text-align: center;">
+                            <span>@Html.DisplayFor(modelItem => item.Count)</span>
+                        </td>
+                            
+                <!-- 商品小計金額顯示處理 -->
+                    <td style="text-align: center;">
+                        $<span class="subtotal">@Html.DisplayFor(modelItem => item.SubTotal)</span>
+                    </td>
+                    
+                <!-- 商品移除顯示處理 -->
+                    <td style="text-align: center;">
+                        <img id="deleteImg" src="https://cdn-icons-png.flaticon.com/512/484/484662.png" alt="移除" style="height: 20px" type="button" data-bs-toggle="modal" data-bs-target="#removeCartItem_@item.CartItemId">
+                            <!-- 移除購物車商品的 Modal -->
+                            <div class="modal fade" id="removeCartItem_@item.CartItemId" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h1 class="modal-title fs-5" id="staticBackdropLabel">移除確認</h1>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            您確定要從購物車移除這個商品嗎？
+                                        </div>
+                                        <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                                         @Html.ActionLink($"移除", "Delete", "Cart", new { id = item.CartItemId },  new { Class = "btn btn-primary" })
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+    </table>
+    <div class="container d-grid gap-2 d-md-flex justify-content-md-between mt-5">
+        <a href="@($"{GlobalVar.MVCsurl}Search")" class="btn btn-secondary btn-lg">繼續購物</a>
+        @{
+            var userData = Context.Session.GetString(CDictionary.TIXPLORER_USER_DATA);
+        }
+
+        <p> @itemCount 項商品<span class="fs-5 fw-bold"> 總金額 $ @sum.ToString("N0") </span> </p>
+        @if (!string.IsNullOrEmpty(userData))
+        {
+            @Html.ActionLink("結 帳 去", "Checkout", "Checkout", null, new { @class = "btn btn-primary btn-lg" })
+        }
+        else
+        {
+            <a href="#" class="btn btn-primary btn-lg" onclick="redirectToLogin()">結 帳 去</a>
+        }
+    </div>
+    <div>
+    </div>
+</div>
+
+
+@section Scripts
+    {
+    <script>
+        /* 購物車資料傳遞至登入畫面 */
+        @{
+            var cartDataJsonString = Json.Serialize(Model); 
+        }
+            var cartData = @cartDataJsonString;
+            function redirectToLogin() {
+                var cartDataJsonString = JSON.stringify(cartData);
+                var loginMember = "@GlobalVar.SPAurl";
+                var link = `${loginMember}Login?cartData=${cartDataJsonString}`;
+                window.location.href = link;
+            }
+
+    </script>
+}
